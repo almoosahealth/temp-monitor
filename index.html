@@ -764,6 +764,7 @@
       unit: selectedUnit, hospital: selectedHospital, building: selectedBuilding,
       patientType: selectedPatientType,
       shift: selectedShift, date: date, staffId: staffId, staffEmail: currentUserEmail,
+      accessToken: graphAccessToken,
       roomEquipmentFile: '',
       fridges: [], freezers: []
     };
@@ -803,14 +804,21 @@
     var btn = document.getElementById('btn-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Submitting...';
 
+ // text/plain keeps this a simple request — no CORS preflight, which
+    // Apps Script cannot answer. doPost still JSON.parses the body.
     fetch(APPS_SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     })
-    .then(function(){
+    .then(function(r){ return r.json(); })
+    .then(function(res){
       btn.disabled = false; btn.innerHTML = 'Submit Reading';
-      showConfirmation(payload);
+      if (res && res.success) {
+        showConfirmation(payload);
+      } else {
+        showStatus('error', 'Submission was not accepted. Please try again.');
+      }
     })
     .catch(function(){
       btn.disabled = false; btn.innerHTML = 'Submit Reading';
