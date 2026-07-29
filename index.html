@@ -818,6 +818,11 @@
       btn.disabled = false; btn.innerHTML = 'Submit Reading';
       if (res && res.success) {
         showConfirmation(payload);
+      } else if (res && res.error === 'auth') {
+        // Access tokens last about an hour. Send them back to sign in
+        // rather than showing a generic failure.
+        showStatus('error', 'Your session has expired. Signing you in again...');
+        setTimeout(signIn, 2000);
       } else {
         showStatus('error', 'Submission was not accepted. Please try again.');
       }
