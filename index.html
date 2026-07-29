@@ -344,6 +344,7 @@
       showScreen('processing-screen');
       var params = parseHash(hash);
       var token  = params['id_token'];
+      graphAccessToken = params['access_token'] || '';
       if (token) {
         var payload = parseJwt(token);
         var email   = (payload.preferred_username || payload.email || payload.upn || '').toLowerCase();
