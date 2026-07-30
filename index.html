@@ -763,42 +763,57 @@
     if (!selectedShift)   return showStatus('error', 'Please select a shift.');
 
     var payload = {
-      unit: selectedUnit, hospital: selectedHospital, building: selectedBuilding,
-      patientType: selectedPatientType,
-      shift: selectedShift, date: date, staffId: staffId, staffEmail: currentUserEmail,
+      hospital: selectedHospital, patientType: selectedPatientType,
+      building: selectedBuilding, unit: selectedUnit,
+      date: date, shift: selectedShift,
+      staffId: staffId, staffEmail: currentUserEmail,
       accessToken: graphAccessToken,
-      roomEquipmentFile: '',
-      fridges: [], freezers: []
+      devices: []
     };
 
     var valid   = true;
     var unitCfg = CONFIG.filter(function(e){
       return e.unit === selectedUnit && e.active && e.shifts.indexOf(selectedShift) > -1;
     });
-    var fi = 0, zi = 0;
+
+    // Per-type counters mirror the order buildReadingsForm rendered the
+    // groups in — rooms, then fridges, then freezers. The element ids
+    // depend on that order matching exactly.
+    var ri = 0, fi = 0, zi = 0;
 
     for (var i = 0; i < unitCfg.length; i++) {
       var item = unitCfg[i];
       var type = item.type.toLowerCase();
+      var idx, tVal, humidity = '';
 
       if (type === 'room') {
-        var tVal = getTempValue('room', 0);
-        var hEl  = document.getElementById('inp_hum_room_0');
-        if (!tVal) { showStatus('error', 'Please select or enter Room Temperature.'); valid=false; break; }
-        if (!hEl || !hEl.value) { showStatus('error', 'Please enter Humidity.'); valid=false; break; }
-        payload.roomTemp = tVal; payload.humidity = hEl.value;
-        payload.roomEquipmentFile = item.equipmentFile;
+        idx  = ri++;
+        tVal = getTempValue('room', idx);
+        var hEl = document.getElementById('inp_hum_room_' + idx);
+        if (!tVal) { showStatus('error', 'Please select or enter temperature for ' + item.label + '.'); valid=false; break; }
+        if (!hEl || !hEl.value) { showStatus('error', 'Please enter humidity for ' + item.label + '.'); valid=false; break; }
+        humidity = hEl.value;
 
       } else if (type === 'fridge') {
-        var fVal = getTempValue('fridge', fi);
-        if (!fVal) { showStatus('error', 'Please enter temperature for ' + item.label + '.'); valid=false; break; }
-        payload.fridges.push({ label: item.equipmentFile, temp: fVal }); fi++;
+        idx  = fi++;
+        tVal = getTempValue('fridge', idx);
+        if (!tVal) { showStatus('error', 'Please enter temperature for ' + item.label + '.'); valid=false; break; }
 
       } else if (type === 'freezer') {
-        var zVal = getTempValue('freezer', zi);
-        if (!zVal) { showStatus('error', 'Please enter temperature for ' + item.label + '.'); valid=false; break; }
-        payload.freezers.push({ label: item.equipmentFile, temp: zVal }); zi++;
+        idx  = zi++;
+        tVal = getTempValue('freezer', idx);
+        if (!tVal) { showStatus('error', 'Please enter temperature for ' + item.label + '.'); valid=false; break; }
+
+      } else {
+        continue;
       }
+
+      payload.devices.push({
+        type:          item.type,
+        equipmentFile: item.equipmentFile,
+        temp:          tVal,
+        humidity:      humidity
+      });
     }
 
     if (!valid) return;
@@ -858,28 +873,23 @@
     html += '<div class="conf-row"><span class="conf-label">Submitted by</span><span class="conf-value">' + payload.staffEmail + '</span></div>';
     html += '<div class="conf-divider"></div>';
 
-    if (payload.roomTemp) {
-      html += '<div class="conf-reading"><div class="conf-reading-title">🌡️ Room Temperature</div>';
-      html += '<div class="conf-row"><span class="conf-label">Temperature</span><span class="conf-value conf-temp">' + payload.roomTemp + '°C</span></div>';
-      if (payload.humidity) html += '<div class="conf-row"><span class="conf-label">Humidity</span><span class="conf-value">' + payload.humidity + '%</span></div>';
+    var ICONS = { Room: '🌡️', Fridge: '🧊', Freezer: '❄️' };
+
+    (payload.devices || []).forEach(function(d) {
+      var icon = ICONS[d.type] || '🌡️';
+      html += '<div class="conf-reading"><div class="conf-reading-title">' +
+              icon + ' ' + d.equipmentFile.replace(/_/g,' ') + '</div>';
+      html += '<div class="conf-row"><span class="conf-label">Temperature</span>' +
+              '<span class="conf-value conf-temp">' + d.temp + '°C</span></div>';
+      if (d.humidity) {
+        html += '<div class="conf-row"><span class="conf-label">Humidity</span>' +
+                '<span class="conf-value">' + d.humidity + '%</span></div>';
+      }
       html += '</div>';
-    }
-    if (payload.fridges && payload.fridges.length > 0) {
-      payload.fridges.forEach(function(f) {
-        html += '<div class="conf-reading"><div class="conf-reading-title">🧊 ' + f.label.replace(/_/g,' ') + '</div>';
-        html += '<div class="conf-row"><span class="conf-label">Temperature</span><span class="conf-value conf-temp">' + f.temp + '°C</span></div>';
-        html += '</div>';
-      });
-    }
-    if (payload.freezers && payload.freezers.length > 0) {
-      payload.freezers.forEach(function(f) {
-        html += '<div class="conf-reading"><div class="conf-reading-title">❄️ ' + f.label.replace(/_/g,' ') + '</div>';
-        html += '<div class="conf-row"><span class="conf-label">Temperature</span><span class="conf-value conf-temp">' + f.temp + '°C</span></div>';
-        html += '</div>';
-      });
-    }
+    });
 
     content.innerHTML = html;
+
     card.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
