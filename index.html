@@ -140,7 +140,13 @@
   .date-row { display: flex; gap: 8px; align-items: flex-end; }
   .date-row input { flex: 1; }
   .btn-today { padding: 11px 14px; background: var(--teal-soft); color: var(--teal-dark); border: 1.5px solid var(--teal-mid); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
-
+/* Correction mode — visibly different so a nurse can't be in it by accident */
+  .correction-bar { margin-bottom: 14px; }
+  .correction-toggle { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .correction-toggle input { width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; }
+  .correction-note { display: none; font-size: 13px; line-height: 1.5; color: #8a6d1f; background: #fdf6e3; border: 1px solid #e8d9a0; border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .correction-note.show { display: block; }
+  #card-readings.correcting { border-color: #e8d9a0; background: #fffdf7; }
   .hidden { display: none !important; }
 
   /* Confirmation screen */
@@ -285,6 +291,17 @@
   <!-- Step 2: Readings -->
   <div class="card hidden" id="card-readings">
     <div class="section-label">Step 2 — Readings</div>
+
+    <div class="correction-bar">
+      <label class="correction-toggle">
+        <input type="checkbox" id="chk-correction" onchange="toggleCorrection()">
+        <span>Correcting a previous entry</span>
+      </label>
+      <div class="correction-note" id="correction-note">
+        Fill in only what needs changing. Anything left blank keeps the value already recorded.
+      </div>
+    </div>
+
     <div id="readings-container"></div>
   </div>
 
@@ -903,6 +920,6 @@
   }
 </script>
 
-<div class="version-badge">V2.6.1 · 2026-07-30</div>
+<div class="version-badge">V2.7.0 · 2026-07-30</div>
 </body>
 </html>
