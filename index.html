@@ -355,6 +355,7 @@
   let selectedUnit        = '';
   let selectedShift       = '';
   let selectedPatientType = 'In Patient';
+  let correctionMode = false;
 
   // ── On load ──────────────────────────────────────────────────────────────
   window.onload = function() {
@@ -560,7 +561,11 @@
     document.getElementById('sel-unit').innerHTML = '<option value="">— Select unit —</option>';
     resetFromShift();
   }
-
+function toggleCorrection() {
+    correctionMode = document.getElementById('chk-correction').checked;
+    document.getElementById('correction-note').classList.toggle('show', correctionMode);
+    document.getElementById('card-readings').classList.toggle('correcting', correctionMode);
+  }
   function resetFromShift() {
     selectedShift = '';
     document.getElementById('pill-A1').classList.remove('selected');
