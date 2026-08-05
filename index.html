@@ -921,8 +921,11 @@ if (correctionMode && payload.devices.length === 0) {
       var icon = ICONS[d.type] || '🌡️';
       html += '<div class="conf-reading"><div class="conf-reading-title">' +
               icon + ' ' + d.equipmentFile.replace(/_/g,' ') + '</div>';
-      html += '<div class="conf-row"><span class="conf-label">Temperature</span>' +
-              '<span class="conf-value conf-temp">' + d.temp + '°C</span></div>';
+      // A correction may carry humidity only — don't render a bare °C.
+      if (d.temp) {
+        html += '<div class="conf-row"><span class="conf-label">Temperature</span>' +
+                '<span class="conf-value conf-temp">' + d.temp + '°C</span></div>';
+      }
       if (d.humidity) {
         html += '<div class="conf-row"><span class="conf-label">Humidity</span>' +
                 '<span class="conf-value">' + d.humidity + '%</span></div>';
@@ -944,6 +947,6 @@ if (correctionMode && payload.devices.length === 0) {
   }
 </script>
 
-<div class="version-badge">V2.7.1 · 2026-07-30</div>
+<div class="version-badge">V2.7.2 · 2026-08-05</div>
 </body>
 </html>
