@@ -366,6 +366,14 @@
   // Shift labels. A shift not listed here still works — it just gets a
   // plain label — so adding C1 to the config needs no edit here.
   const SHIFT_LABELS = { 'A1': '☀️ A1 · Morning', 'B1': '🌙 B1 · Evening' };
+
+  // Who to inform, by equipment type. A room is an HVAC problem; a
+  // fridge or freezer is a device problem.
+  const OOR_TEAM = {
+    'Room':    'Maintenance',
+    'Fridge':  'Biomedical Engineering',
+    'Freezer': 'Biomedical Engineering'
+  };
   // ─────────────────────────────────────────────────────────────────────────
 
   let currentUserEmail = '';
@@ -731,7 +739,8 @@
     // OOR banner
     var oor = document.createElement('div');
     oor.className = 'oor-banner'; oor.id = 'oor_' + id;
-    oor.innerHTML = '🚨 OUT OF RANGE — Notify Biomedical Engineering immediately!';
+        var team = OOR_TEAM[item.type] || 'Maintenance';
+    oor.innerHTML = '🚨 TEMPERATURE OUT OF RANGE — Inform ' + team + ' and raise an OVR';
     tempField.appendChild(oor);
 
     div.appendChild(tempField);
@@ -767,7 +776,7 @@
 
       var humOor = document.createElement('div');
       humOor.className = 'oor-banner'; humOor.id = 'humoor_' + id;
-      humOor.innerHTML = '🚨 HUMIDITY OUT OF RANGE — Check HVAC system!';
+            humOor.innerHTML = '🚨 HUMIDITY OUT OF RANGE — Inform ' + team + ' and raise an OVR';
       humField.appendChild(humOor);
 
       div.appendChild(humField);
