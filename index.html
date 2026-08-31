@@ -872,11 +872,7 @@
     if(oor) oor.classList.toggle('show', !ok);
     refreshIncident(id);
   }
-    var ok = val <= 60;
-    if(st) st.textContent = ok ? '✓' : '⚠️';
-    if(oor) oor.classList.toggle('show', !ok);
-    refreshIncident(id);
-  }
+    
 
   // A device is an incident if EITHER its temperature or its humidity is
   // out of range. One incident block serves both — a room with both out
