@@ -114,8 +114,8 @@
   /* Temperature select */
   .temp-wrapper { position: relative; }
   .temp-status { position: absolute; right: 38px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
-  select.temp-ok   { border-color: var(--ok);  background-color: var(--ok-soft); }
-  select.temp-warn { border-color: var(--warn); background-color: var(--warn-soft); }
+    select.temp-ok,   input.temp-ok   { border-color: var(--ok);   background-color: var(--ok-soft); }
+  select.temp-warn, input.temp-warn { border-color: var(--warn); background-color: var(--warn-soft); }
 
   /* Custom temp input */
   .custom-temp-wrap { margin-top: 8px; }
@@ -855,16 +855,23 @@
     refreshIncident(id);
   }
 
-  function validateHum(input, id) {
+    function validateHum(input, id) {
     var st  = document.getElementById('humstatus_' + id);
     var oor = document.getElementById('humoor_' + id);
     var val = parseFloat(input.value);
     if (isNaN(val)) {
+      input.className = '';
       if(st) st.textContent='';
       if(oor) oor.classList.remove('show');
       refreshIncident(id);
       return;
     }
+    var ok = val <= 60;
+    input.className = ok ? 'temp-ok' : 'temp-warn';
+    if(st) st.textContent = ok ? '✓' : '⚠️';
+    if(oor) oor.classList.toggle('show', !ok);
+    refreshIncident(id);
+  }
     var ok = val <= 60;
     if(st) st.textContent = ok ? '✓' : '⚠️';
     if(oor) oor.classList.toggle('show', !ok);
