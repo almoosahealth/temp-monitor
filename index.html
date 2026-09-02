@@ -490,11 +490,21 @@
     showScreen('app-screen');
   }
 
+  // Access tokens last about an hour. A nurse who leaves the page open
+  // over a break comes back to an expired one, so send her to sign in
+  // again rather than showing an empty unit list she cannot explain.
+  function expiredSession() {
+    showStatus('error', 'Your session has expired. Signing you in again...');
+    setTimeout(signIn, 2000);
+  }
+
   // Small payload, all three types at once, cached for the session. If it
   // fails the incident box still works — it falls back to free text only,
   // which is what it was before the options existed.
   function loadIncidentOptions() {
-    fetch(APPS_SCRIPT_URL + '?action=getIncidentOptions&t=' + Date.now(),
+    fetch(APPS_SCRIPT_URL + '?action=getIncidentOptions' +
+          '&token=' + encodeURIComponent(graphAccessToken) +
+          '&t=' + Date.now(),
           { mode: 'cors' })
       .then(function(r){ return r.json(); })
       .then(function(d){
@@ -552,13 +562,18 @@
     sel.disabled  = true;
     document.getElementById('field-unit').classList.remove('hidden');
 
+    // The token goes with every read. doGet verifies it against Graph,
+    // so the Apps Script URL sitting in this file's source is worth
+    // nothing to anyone who copies it out.
     var url = APPS_SCRIPT_URL + '?action=getConfig&hospital=' + encodeURIComponent(hospital);
     if (building) url += '&building=' + encodeURIComponent(building);
+    url += '&token=' + encodeURIComponent(graphAccessToken);
     url += '&t=' + Date.now();
 
     fetch(url, { mode: 'cors' })
       .then(function(r){ return r.json(); })
       .then(function(data){
+        if (data && data.error === 'auth') return expiredSession();
         CONFIG = Array.isArray(data) ? data : [];
         populateUnits();
       })
@@ -1257,6 +1272,6 @@
   }
 </script>
 
-<div class="version-badge">V2.9.0 · 2026-09-02</div>
+<div class="version-badge">V2.9.1 · 2026-09-02</div>
 </body>
 </html>
