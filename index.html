@@ -159,6 +159,14 @@
   .incident-field { margin-bottom: 12px; }
   .incident-field:last-child { margin-bottom: 0; }
   .incident-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  /* Option lists — actions are checkboxes, outcome is radios. Rows are
+     labels so the whole row is a tap target, not just the little box. */
+  .opt-list { margin: 2px 0 8px; }
+  .opt-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; margin-bottom: 5px; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.35; cursor: pointer; }
+  .opt-row:last-child { margin-bottom: 0; }
+  .opt-row input { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; accent-color: var(--warn); cursor: pointer; }
+  .opt-row span { flex: 1; padding-top: 1px; }
+  .opt-row:has(input:checked) { border-color: var(--warn); background: #fff6f5; }
 
   /* Version badge - remove when done */
   .version-badge {
@@ -379,6 +387,10 @@
   let currentUserEmail = '';
   let graphAccessToken = '';
   let CONFIG           = [];
+  // Incident actions and outcomes, keyed by equipment type. Fetched once
+  // per session from the IncidentOptions tab. Adding an option is a row
+  // in the sheet, never an edit here.
+  let INCIDENT_OPTIONS = {};
   let selectedHospital    = '';
   let selectedBuilding    = '';
   let selectedUnit        = '';
@@ -474,7 +486,21 @@
   function initApp(email) {
     document.getElementById('inp-email-display').value = email;
     setToday();
+    loadIncidentOptions();
     showScreen('app-screen');
+  }
+
+  // Small payload, all three types at once, cached for the session. If it
+  // fails the incident box still works — it falls back to free text only,
+  // which is what it was before the options existed.
+  function loadIncidentOptions() {
+    fetch(APPS_SCRIPT_URL + '?action=getIncidentOptions&t=' + Date.now(),
+          { mode: 'cors' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        INCIDENT_OPTIONS = (d && !d.error) ? d : {};
+      })
+      .catch(function(){ INCIDENT_OPTIONS = {}; });
   }
 
   // ── Hospital ──────────────────────────────────────────────────────────────
@@ -792,30 +818,91 @@
     inc.className = 'incident-box';
     inc.id        = 'incident_' + id;
 
+    var opts = INCIDENT_OPTIONS[item.type] || { actions: [], outcomes: [] };
+
+    // Actions — multi-select. A nurse who found the plug out, re-seated
+    // it and called Biomed anyway did three things, and all three belong
+    // on the record. Ticks are joined with '; ' into column J.
     var f1 = document.createElement('div');
     f1.className = 'incident-field';
     var l1 = document.createElement('label');
     l1.innerHTML = 'Analysis &amp; action taken <span class="req">*</span>';
+    f1.appendChild(l1);
+
+    if (opts.actions && opts.actions.length) {
+      var ol1 = document.createElement('div');
+      ol1.className = 'opt-list';
+      opts.actions.forEach(function(txt, n){
+        var row = document.createElement('label');
+        row.className = 'opt-row';
+        var cb = document.createElement('input');
+        cb.type  = 'checkbox';
+        cb.value = txt;
+        cb.id    = 'inc_act_' + id + '_' + n;
+        cb.setAttribute('data-inc', 'act_' + id);
+        var sp = document.createElement('span');
+        sp.textContent = txt;
+        row.appendChild(cb); row.appendChild(sp);
+        ol1.appendChild(row);
+      });
+      f1.appendChild(ol1);
+    }
+
     var t1 = document.createElement('textarea');
     t1.id = 'inp_analysis_' + id;
-    t1.placeholder = 'What was found, and what was done about it';
+    t1.placeholder = (opts.actions && opts.actions.length)
+      ? 'Anything else that was found or done (optional)'
+      : 'What was found, and what was done about it';
+    f1.appendChild(t1);
+
     var h1 = document.createElement('div');
     h1.className = 'incident-hint';
-    h1.textContent = 'e.g. Fan checked, AC adjusted, engineering notified';
-    f1.appendChild(l1); f1.appendChild(t1); f1.appendChild(h1);
+    h1.textContent = (opts.actions && opts.actions.length)
+      ? 'Tick everything that applies. Add anything the list does not cover.'
+      : 'e.g. Fan checked, AC adjusted, engineering notified';
+    f1.appendChild(h1);
     inc.appendChild(f1);
 
+    // Outcome — single-select. One incident ends one way. Free text
+    // alongside it goes into column K with the choice.
     var f2 = document.createElement('div');
     f2.className = 'incident-field';
     var l2 = document.createElement('label');
     l2.innerHTML = 'Result / outcome <span class="req">*</span>';
+    f2.appendChild(l2);
+
+    if (opts.outcomes && opts.outcomes.length) {
+      var ol2 = document.createElement('div');
+      ol2.className = 'opt-list';
+      opts.outcomes.forEach(function(txt, n){
+        var row2 = document.createElement('label');
+        row2.className = 'opt-row';
+        var rb = document.createElement('input');
+        rb.type  = 'radio';
+        rb.name  = 'inc_out_' + id;
+        rb.value = txt;
+        rb.id    = 'inc_out_' + id + '_' + n;
+        var sp2 = document.createElement('span');
+        sp2.textContent = txt;
+        row2.appendChild(rb); row2.appendChild(sp2);
+        ol2.appendChild(row2);
+      });
+      f2.appendChild(ol2);
+    }
+
     var t2 = document.createElement('textarea');
     t2.id = 'inp_outcome_' + id;
-    t2.placeholder = 'What happened after the action';
+    t2.placeholder = (opts.outcomes && opts.outcomes.length)
+      ? 'Anything else about the result (optional)'
+      : 'What happened after the action';
+    f2.appendChild(t2);
+
     var h2 = document.createElement('div');
     h2.className = 'incident-hint';
-    h2.textContent = 'e.g. Temperature returned to normal range within 2 hours';
-    f2.appendChild(l2); f2.appendChild(t2); f2.appendChild(h2);
+    h2.textContent = (opts.outcomes && opts.outcomes.length)
+      ? 'Choose one. Add detail if the result needs explaining.'
+      : 'e.g. Temperature returned to normal range within 2 hours';
+    f2.appendChild(h2);
     inc.appendChild(f2);
 
     div.appendChild(inc);
@@ -905,7 +992,34 @@
       var o = document.getElementById('inp_outcome_' + id);
       if (a) a.value = '';
       if (o) o.value = '';
+      // Ticks are part of the explanation, so they clear with the text.
+      document.querySelectorAll('[data-inc="act_' + id + '"]').forEach(
+        function(cb){ cb.checked = false; });
+      document.querySelectorAll('input[name="inc_out_' + id + '"]').forEach(
+        function(rb){ rb.checked = false; });
     }
+  }
+
+  // Ticked options first, in the order the sheet lists them, then the
+  // free text. Joined with '; ' into one cell. J stays a single column
+  // and the "row is an incident when J is non-blank" rule is untouched.
+  function collectIncident(id) {
+    var acts = [];
+    document.querySelectorAll('[data-inc="act_' + id + '"]').forEach(function(cb){
+      if (cb.checked) acts.push(cb.value);
+    });
+    var aEl = document.getElementById('inp_analysis_' + id);
+    var aFree = aEl ? aEl.value.trim() : '';
+    if (aFree) acts.push(aFree);
+
+    var outs = [];
+    var picked = document.querySelector('input[name="inc_out_' + id + '"]:checked');
+    if (picked) outs.push(picked.value);
+    var oEl = document.getElementById('inp_outcome_' + id);
+    var oFree = oEl ? oEl.value.trim() : '';
+    if (oFree) outs.push(oFree);
+
+    return { analysis: acts.join('; '), outcome: outs.join('; ') };
   }
 
   function getTempValue(type, index) {
@@ -1002,12 +1116,13 @@
       var incId    = type + '_' + idx;
       var analysis = '', outcome = '';
       if (isOutOfRange(incId)) {
-        var aEl = document.getElementById('inp_analysis_' + incId);
-        var oEl = document.getElementById('inp_outcome_' + incId);
-        analysis = aEl ? aEl.value.trim() : '';
-        outcome  = oEl ? oEl.value.trim() : '';
+        var picked = collectIncident(incId);
+        analysis = picked.analysis;
+        outcome  = picked.outcome;
+        // One tick is enough. A nurse who re-seated a plug should not
+        // have to write a sentence saying so.
         if (!analysis) {
-          showStatus('error', 'Out of range — please record the analysis and action taken for ' + item.label + '.');
+          showStatus('error', 'Out of range — please record the action taken for ' + item.label + '.');
           valid = false; break;
         }
         if (!outcome) {
@@ -1142,6 +1257,6 @@
   }
 </script>
 
-<div class="version-badge">V2.8.0 · 2026-08-31</div>
+<div class="version-badge">V2.9.0 · 2026-09-02</div>
 </body>
 </html>
